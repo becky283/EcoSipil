@@ -1,6 +1,8 @@
 import { BoQTable } from './BoQTable';
 import { RABTable } from './RABTable';
 import { ChartSection } from './ChartSection';
+import { SensitivityPanel } from './SensitivityPanel';
+import { MaterialComparison } from './MaterialComparison';
 import { getRegionLabel, getMultiplier } from '../data/priceDatabase.js';
 
 const MATERIAL_LABEL = {
@@ -10,18 +12,40 @@ const MATERIAL_LABEL = {
 };
 
 const STAT_CARDS = (v) => [
-  { label: 'Total Luas Dinding',    val: `${v.totalLuas} m²` },
-  { label: 'Volume Pasangan',       val: `${v.totalVolume} m³` },
-  { label: 'Total Luas Plesteran',  val: `${v.totalLuasPlesteran} m²` },
-  { label: 'Luas Lantai',           val: `${v.totalLuasLantai} m²` },
+  { label: 'Luas Dinding Bersih',   val: `${v.totalLuas} m²` },
+  { label: 'Volume Pasangan',        val: `${v.totalVolume} m³` },
+  { label: 'Total Luas Plesteran',   val: `${v.totalLuasPlesteran} m²` },
+  { label: 'Luas Lantai',            val: `${v.totalLuasLantai} m²` },
 ];
 
-export function OutputPage({ params, volumeResult, rabResult, carbonResult, onBack, onMulaiUlang }) {
+export function OutputPage({ params, volumeResult, rabResult, carbonResult, comparisonData, onBack, onMulaiUlang }) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
 
+      {/* ── Print-only header (muncul hanya saat print/PDF) ── */}
+      <div className="hidden print:flex items-center gap-4 pb-4 mb-2 border-b-2 border-green-800">
+        <img src="/logo.png" alt="EcoSipil" className="h-14 w-14 object-contain" />
+        <div>
+          <p className="text-2xl font-bold text-green-800 leading-none">EcoSipil</p>
+          <p className="text-xs text-green-600 leading-none mt-1">Cerdas. Terintegrasi. Berkelanjutan.</p>
+        </div>
+        <div className="ml-auto text-right text-xs text-gray-400">
+          <p>Laporan Estimasi Dinding & RAB</p>
+          <p>{new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })}</p>
+        </div>
+      </div>
+
       {/* ── Header Ringkasan ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        {/* Logo + nama app (screen only) */}
+        <div className="print:hidden flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+          <img src="/logo.png" alt="EcoSipil" className="h-10 w-10 object-contain" />
+          <div>
+            <p className="text-sm font-bold text-green-800 leading-none">EcoSipil</p>
+            <p className="text-xs text-gray-400 leading-none mt-0.5">Hasil Estimasi Dinding & RAB</p>
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-green-800">
@@ -70,6 +94,20 @@ export function OutputPage({ params, volumeResult, rabResult, carbonResult, onBa
             </div>
           ))}
         </div>
+
+        {volumeResult.totalLuasBukaan > 0 && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+            <span className="text-base">🚪</span>
+            <span>
+              Sudah dikurangi bukaan pintu/jendela:{' '}
+              <strong className="text-orange-700">
+                {volumeResult.totalLuasBukaan} m²
+              </strong>
+              {' '}(dari luas kotor{' '}
+              <span className="font-mono">{volumeResult.totalLuasKotor} m²</span>)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Tabel BoQ ── */}
@@ -120,17 +158,46 @@ export function OutputPage({ params, volumeResult, rabResult, carbonResult, onBa
         </p>
       </div>
 
+      {/* ── Komparasi Material ── */}
+      {comparisonData && (
+        <MaterialComparison
+          comparisonData={comparisonData}
+          selectedMaterial={params.material}
+        />
+      )}
+
+      {/* ── Sensitivity Analysis ── */}
+      <SensitivityPanel rabResult={rabResult} />
+
       {/* ── Chart Visualisasi ── */}
       <ChartSection rabResult={rabResult} carbonResult={carbonResult} />
 
       {/* ── Tombol Print mobile full-width ── */}
-      <div className="print:hidden pb-6">
+      <div className="print:hidden pb-2">
         <button
           onClick={() => window.print()}
           className="w-full py-4 rounded-xl bg-green-700 text-white text-base font-bold hover:bg-green-800 active:bg-green-900 shadow-sm"
         >
           🖨 Print / Simpan PDF
         </button>
+      </div>
+
+      {/* ── Footer branded ── */}
+      <div className="pb-8 flex flex-col items-center gap-2 print:pb-4">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="EcoSipil" className="h-7 w-7 object-contain opacity-70" />
+          <span className="text-sm font-bold text-green-800 opacity-70">EcoSipil</span>
+        </div>
+        <p className="text-xs text-gray-400 text-center">
+          Cerdas. Terintegrasi. Berkelanjutan.
+        </p>
+        <p className="text-xs text-gray-400 text-center">
+          Independent project ·{' '}
+          <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-gray-600 underline underline-offset-2">
+            Radithya Al Fattan Pratomo
+          </a>
+          {' '}· Teknik Sipil UI 2024
+        </p>
       </div>
 
     </div>

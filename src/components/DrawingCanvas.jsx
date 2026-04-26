@@ -62,7 +62,26 @@ function drawDimensionLabel(ctx, p1, p2) {
   ctx.restore();
 }
 
-export function DrawingCanvas({ points, previewPos, isClosed, onAddPoint, onUpdatePreview, onUndo }) {
+function drawOpeningMarker(ctx, p1, p2, count) {
+  const mx = (p1.x + p2.x) / 2;
+  const my = (p1.y + p2.y) / 2;
+  const label = count === 1 ? '🚪' : `🚪×${count}`;
+  ctx.save();
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // small white pill background
+  const tw = ctx.measureText(label).width;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.roundRect(mx - tw / 2 - 4, my + 12, tw + 8, 18, 4);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.fillText(label, mx, my + 21);
+  ctx.restore();
+}
+
+export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onAddPoint, onUpdatePreview, onUndo }) {
   const canvasRef = useRef(null);
   useUndoShortcut(onUndo);
 
@@ -117,6 +136,15 @@ export function DrawingCanvas({ points, previewPos, isClosed, onAddPoint, onUpda
         drawDimensionLabel(ctx, points[points.length - 1], points[0]);
       }
 
+      // Marker bukaan pintu/jendela per segmen
+      const wallCount = isClosed ? points.length : points.length - 1;
+      for (let i = 0; i < wallCount; i++) {
+        const p1 = points[i];
+        const p2 = i < points.length - 1 ? points[i + 1] : points[0];
+        const count = openings.filter(o => o.wallIndex === i).length;
+        if (count > 0) drawOpeningMarker(ctx, p1, p2, count);
+      }
+
       // Garis preview (putus-putus)
       if (!isClosed && previewPos && points.length > 0) {
         const last = points[points.length - 1];
@@ -157,7 +185,7 @@ export function DrawingCanvas({ points, previewPos, isClosed, onAddPoint, onUpda
     const ro = new ResizeObserver(render);
     ro.observe(canvas);
     return () => ro.disconnect();
-  }, [points, previewPos, isClosed]);
+  }, [points, previewPos, isClosed, openings]);
 
   const getCanvasCoords = (clientX, clientY) => {
     const rect = canvasRef.current.getBoundingClientRect();

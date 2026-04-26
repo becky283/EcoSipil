@@ -36,6 +36,7 @@ function App() {
   const [phase, setPhase] = useState('sketsa');
   const [params, setParams] = useState(null);
   const [hasil, setHasil] = useState(null);
+  const [openings, setOpenings] = useState([]);
 
   const { points, previewPos, isClosed, addPoint, undo, clear, updatePreview } = useDrawing();
   const totalPanjang = useMemo(() => calcTotalPanjang(points, isClosed), [points, isClosed]);
@@ -43,17 +44,33 @@ function App() {
   const handleFinishSketsa = () => setPhase('parameter');
 
   const handleHitung = (p) => {
-    const volumeResult = VolumeEngine.compute(points, isClosed, p);
+    const volumeResult = VolumeEngine.compute(points, isClosed, p, openings);
     const rabResult    = RABGenerator.generate(volumeResult, p.material, p.lokasi);
     const carbonResult = CarbonEngine.compute(volumeResult.boq, p.material);
+
+    // Compute the other two materials for comparison (same geometry, same lokasi)
+    const ALL_MATERIALS = ['bata_merah', 'bata_hebel', 'batako'];
+    const comparisonData = ALL_MATERIALS.map(mat => {
+      const vr  = VolumeEngine.compute(points, isClosed, { ...p, material: mat }, openings);
+      const rab = RABGenerator.generate(vr, mat, p.lokasi);
+      const co2 = CarbonEngine.compute(vr.boq, mat);
+      return { material: mat, grandTotal: rab.grandTotal, carbon: co2.total };
+    });
+
     setParams(p);
-    setHasil({ volumeResult, rabResult, carbonResult });
+    setHasil({ volumeResult, rabResult, carbonResult, comparisonData });
     setPhase('output');
   };
 
   const handleBackToParam  = () => setPhase('parameter');
   const handleBackToSketsa = () => setPhase('sketsa');
-  const handleMulaiUlang   = () => { clear(); setParams(null); setHasil(null); setPhase('sketsa'); };
+  const handleMulaiUlang   = () => {
+    clear();
+    setParams(null);
+    setHasil(null);
+    setOpenings([]);
+    setPhase('sketsa');
+  };
 
   const hintText = () => {
     if (points.length === 0) return 'Klik di kanvas untuk mulai menggambar dinding pertama';
@@ -64,15 +81,24 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-green-800 text-white px-4 py-3 flex items-center gap-3 shadow-md print:hidden">
-        <span className="text-xl font-bold tracking-tight">EcoSipil</span>
-        <span className="text-green-300 text-sm font-medium">{PHASE_LABEL[phase]}</span>
+      <header className="bg-green-800 text-white px-4 py-2.5 flex items-center gap-3 shadow-md print:hidden">
+        <img src="/logo.png" alt="EcoSipil" className="h-9 w-9 object-contain rounded-sm" />
+        <div>
+          <span className="text-lg font-bold tracking-tight leading-none">EcoSipil</span>
+          <p className="text-green-300 text-xs leading-none mt-0.5">{PHASE_LABEL[phase]}</p>
+        </div>
       </header>
 
       <main className="p-4 md:p-6">
 
         {phase === 'sketsa' && (
           <>
+            {points.length === 0 && (
+              <div className="flex flex-col items-center gap-1 mb-4 mt-1">
+                <img src="/logo.png" alt="EcoSipil" className="h-20 w-20 object-contain" />
+                <p className="text-xs text-gray-400 tracking-wide">Cerdas. Terintegrasi. Berkelanjutan.</p>
+              </div>
+            )}
             <ToolBar
               onUndo={undo}
               onClear={clear}
@@ -84,17 +110,44 @@ function App() {
               points={points}
               previewPos={previewPos}
               isClosed={isClosed}
+              openings={openings}
               onAddPoint={addPoint}
               onUpdatePreview={updatePreview}
               onUndo={undo}
             />
             <p className="mt-3 text-sm text-gray-500 text-center">{hintText()}</p>
+
+            <div className="mt-6 text-center text-xs text-gray-400 space-y-1">
+              <p>
+                Independent project oleh{' '}
+                <span className="text-gray-500 font-medium">Radithya Al Fattan Pratomo</span>
+                {' '}· Teknik Sipil UI 2024
+              </p>
+              <div className="flex justify-center flex-wrap gap-x-4 gap-y-1">
+                <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-gray-600 underline underline-offset-2">
+                  radithyaalfattan4@gmail.com
+                </a>
+                <a href="https://instagram.com/radithya_a_p" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                  IG: radithya_a_p
+                </a>
+                <a href="https://id.linkedin.com/in/radithyapratomo" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                  LinkedIn
+                </a>
+                <a href="https://github.com/becky283" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                  GitHub: becky283
+                </a>
+              </div>
+            </div>
           </>
         )}
 
         {phase === 'parameter' && (
           <ParamPanel
             totalPanjang={totalPanjang}
+            points={points}
+            isClosed={isClosed}
+            openings={openings}
+            onOpeningsChange={setOpenings}
             onHitung={handleHitung}
             onBack={handleBackToSketsa}
           />
@@ -106,6 +159,7 @@ function App() {
             volumeResult={hasil.volumeResult}
             rabResult={hasil.rabResult}
             carbonResult={hasil.carbonResult}
+            comparisonData={hasil.comparisonData}
             onBack={handleBackToParam}
             onMulaiUlang={handleMulaiUlang}
           />

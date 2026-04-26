@@ -77,18 +77,29 @@ function hitungBoQ(coeff, totalLuas, totalLuasPlesteran) {
 }
 
 export class VolumeEngine {
-  static compute(points, isClosed, { tinggi, tebal, material }) {
+  static compute(points, isClosed, { tinggi, tebal, material }, openings = []) {
     const walls = buildWalls(points, isClosed, tinggi, tebal);
 
-    const wallResults = walls.map(w => ({
-      id: w.id,
-      panjang: +w.panjang.toFixed(3),
-      tinggi: w.tinggi,
-      tebal: w.tebal,
-      luas: +(w.panjang * w.tinggi).toFixed(3),
-      volume: +(w.panjang * w.tinggi * w.tebal).toFixed(3),
-    }));
+    const wallResults = walls.map((w, idx) => {
+      const wallOpenings = openings.filter(o => o.wallIndex === idx);
+      const luasBukaan = wallOpenings.reduce((s, o) => s + o.lebar * o.tinggi, 0);
+      const luasKotor  = +(w.panjang * w.tinggi).toFixed(3);
+      const luasBersih = +Math.max(0, luasKotor - luasBukaan).toFixed(3);
+      return {
+        id: w.id,
+        panjang: +w.panjang.toFixed(3),
+        tinggi: w.tinggi,
+        tebal: w.tebal,
+        luas: luasBersih,
+        luasKotor,
+        luasBukaan: +luasBukaan.toFixed(3),
+        volume: +(luasBersih * w.tebal).toFixed(3),
+        openings: wallOpenings,
+      };
+    });
 
+    const totalLuasKotor      = +wallResults.reduce((s, w) => s + w.luasKotor, 0).toFixed(2);
+    const totalLuasBukaan     = +wallResults.reduce((s, w) => s + w.luasBukaan, 0).toFixed(2);
     const totalLuas           = +wallResults.reduce((s, w) => s + w.luas, 0).toFixed(2);
     const totalVolume         = +wallResults.reduce((s, w) => s + w.volume, 0).toFixed(3);
     const totalLuasPlesteran  = +(totalLuas * 2).toFixed(2);
@@ -96,6 +107,9 @@ export class VolumeEngine {
 
     const boq = hitungBoQ(materialCoeff[material], totalLuas, totalLuasPlesteran);
 
-    return { wallResults, totalLuas, totalVolume, totalLuasPlesteran, totalLuasLantai, boq };
+    return {
+      wallResults, totalLuas, totalLuasKotor, totalLuasBukaan,
+      totalVolume, totalLuasPlesteran, totalLuasLantai, boq,
+    };
   }
 }

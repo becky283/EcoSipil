@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { jabodetabekRegions, getAdjustedPrices, getMultiplier } from '../data/priceDatabase.js';
+import { SCALE } from '../hooks/useDrawing.js';
 
 const TEBAL_PRESETS = [0.10, 0.15, 0.20];
 
@@ -37,7 +38,28 @@ function formatRp(n) {
   return 'Rp ' + n.toLocaleString('id-ID');
 }
 
-export function ParamPanel({ totalPanjang, onHitung, onBack }) {
+const OPENING_TYPES = [
+  { value: 'pintu',   label: 'Pintu',    defaultL: 0.9, defaultT: 2.1 },
+  { value: 'jendela', label: 'Jendela',  defaultL: 1.2, defaultT: 1.2 },
+  { value: 'lainnya', label: 'Lainnya',  defaultL: 1.0, defaultT: 1.0 },
+];
+
+function wallLabel(points, isClosed, idx) {
+  const p1 = points[idx];
+  const p2 = idx < points.length - 1 ? points[idx + 1] : points[0];
+  if (!p1 || !p2) return `Dinding ${idx + 1}`;
+  const dx = (p2.x - p1.x) * SCALE;
+  const dy = (p2.y - p1.y) * SCALE;
+  const len = Math.sqrt(dx * dx + dy * dy).toFixed(2);
+  return `Dinding ${idx + 1} (${len} m)`;
+}
+
+function wallCount(points, isClosed) {
+  if (points.length < 2) return 0;
+  return isClosed ? points.length : points.length - 1;
+}
+
+export function ParamPanel({ totalPanjang, points, isClosed, openings, onOpeningsChange, onHitung, onBack }) {
   const [namaProyek, setNamaProyek]   = useState('');
   const [lokasi, setLokasi]           = useState('depok'); // default Depok (multiplier 1.0)
   const [tinggi, setTinggi]           = useState(3.0);
@@ -45,10 +67,38 @@ export function ParamPanel({ totalPanjang, onHitung, onBack }) {
   const [tebalCustom, setTebalCustom] = useState('');
   const [material, setMaterial]       = useState('bata_merah');
 
+  const [newOpType,  setNewOpType]  = useState('pintu');
+  const [newOpWall,  setNewOpWall]  = useState(0);
+  const [newOpLebar, setNewOpLebar] = useState(0.9);
+  const [newOpTinggi,setNewOpTinggi]= useState(2.1);
+
   const tebalAktif   = tebalCustom !== '' ? parseFloat(tebalCustom) : tebalPreset;
   const luasEstimasi = (totalPanjang * tinggi).toFixed(2);
   const multiplier   = getMultiplier(lokasi);
   const hargaPreview = lokasi ? getAdjustedPrices(material, lokasi) : null;
+  const nWalls       = wallCount(points, isClosed);
+  const totalLuasBukaan = openings.reduce((s, o) => s + o.lebar * o.tinggi, 0);
+
+  const handleAddOpening = () => {
+    if (nWalls === 0) return;
+    onOpeningsChange([...openings, {
+      id: Date.now(),
+      wallIndex: newOpWall,
+      type: newOpType,
+      lebar: +newOpLebar,
+      tinggi: +newOpTinggi,
+    }]);
+  };
+
+  const handleRemoveOpening = (id) => {
+    onOpeningsChange(openings.filter(o => o.id !== id));
+  };
+
+  const handleTypeChange = (val) => {
+    setNewOpType(val);
+    const preset = OPENING_TYPES.find(t => t.value === val);
+    if (preset) { setNewOpLebar(preset.defaultL); setNewOpTinggi(preset.defaultT); }
+  };
 
   const handleHitung = () => {
     if (!tebalAktif || tebalAktif <= 0 || tinggi < 1 || tinggi > 6) return;
@@ -57,6 +107,16 @@ export function ParamPanel({ totalPanjang, onHitung, onBack }) {
 
   return (
     <div className="max-w-lg mx-auto">
+
+      {/* ── Logo mini ParamPanel ── */}
+      <div className="flex items-center gap-3 mb-4 px-1">
+        <img src="/logo.png" alt="EcoSipil" className="h-10 w-10 object-contain" />
+        <div>
+          <p className="text-sm font-bold text-green-800 leading-none">EcoSipil</p>
+          <p className="text-xs text-gray-400 leading-none mt-0.5">Parameter Dinding</p>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
 
         {/* ── Pengaturan Proyek ── */}
@@ -193,11 +253,126 @@ export function ParamPanel({ totalPanjang, onHitung, onBack }) {
           </div>
         )}
 
+        <hr className="border-gray-100" />
+
+        {/* ── Bukaan Pintu & Jendela ── */}
+        <section>
+          <h2 className="text-base font-semibold text-gray-800 mb-1">Bukaan Pintu &amp; Jendela</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Luas bukaan akan dikurangkan dari total luas dinding dan plesteran secara otomatis
+          </p>
+
+          {nWalls === 0 ? (
+            <p className="text-xs text-gray-400 italic">Selesaikan sketsa dinding terlebih dahulu</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Form tambah bukaan */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipe Bukaan</label>
+                    <select
+                      value={newOpType}
+                      onChange={e => handleTypeChange(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {OPENING_TYPES.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Pada Dinding</label>
+                    <select
+                      value={newOpWall}
+                      onChange={e => setNewOpWall(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {Array.from({ length: nWalls }, (_, i) => (
+                        <option key={i} value={i}>{wallLabel(points, isClosed, i)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Lebar (m)</label>
+                    <input
+                      type="number" min="0.3" max="5" step="0.05"
+                      value={newOpLebar}
+                      onChange={e => setNewOpLebar(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tinggi (m)</label>
+                    <input
+                      type="number" min="0.3" max="4" step="0.05"
+                      value={newOpTinggi}
+                      onChange={e => setNewOpTinggi(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleAddOpening}
+                  className="w-full py-2.5 rounded-lg bg-green-700 text-white text-sm font-semibold hover:bg-green-800"
+                >
+                  + Tambah Bukaan
+                </button>
+              </div>
+
+              {/* Daftar bukaan yang sudah ditambahkan */}
+              {openings.length > 0 && (
+                <div className="space-y-2">
+                  {openings.map(o => {
+                    const typeLabel = OPENING_TYPES.find(t => t.value === o.type)?.label ?? o.type;
+                    return (
+                      <div key={o.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
+                        <div className="text-xs">
+                          <span className="font-semibold text-gray-700">{typeLabel}</span>
+                          <span className="text-gray-400 ml-2">
+                            {wallLabel(points, isClosed, o.wallIndex)} · {o.lebar} × {o.tinggi} m
+                            <span className="ml-1 font-mono text-green-700">
+                              = {(o.lebar * o.tinggi).toFixed(2)} m²
+                            </span>
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveOpening(o.id)}
+                          className="text-red-400 hover:text-red-600 text-base leading-none ml-2 shrink-0"
+                          aria-label="Hapus"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-right text-gray-500">
+                    Total bukaan:{' '}
+                    <strong className="text-red-600">{totalLuasBukaan.toFixed(2)} m²</strong>
+                    {' '}dikurangi dari luas dinding
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
         {/* ── Ringkasan dari Sketsa ── */}
         <div className="bg-green-50 rounded-xl p-4 text-sm text-green-900 space-y-1">
           <p className="font-semibold">Ringkasan dari Sketsa</p>
           <p>Total panjang dinding: <span className="font-bold">{totalPanjang.toFixed(2)} m</span></p>
-          <p>Estimasi luas dinding: <span className="font-bold">{luasEstimasi} m²</span></p>
+          <p>Luas dinding kotor: <span className="font-bold">{luasEstimasi} m²</span></p>
+          {openings.length > 0 && (
+            <p>Dikurangi bukaan: <span className="font-bold text-red-600">−{totalLuasBukaan.toFixed(2)} m²</span></p>
+          )}
+          <p>
+            Luas dinding bersih:{' '}
+            <span className="font-bold">
+              {Math.max(0, parseFloat(luasEstimasi) - totalLuasBukaan).toFixed(2)} m²
+            </span>
+          </p>
           <p>Tebal aktif: <span className="font-bold">{tebalAktif ? tebalAktif.toFixed(2) : '—'} m</span></p>
         </div>
 
