@@ -166,10 +166,12 @@ function renderCanvas(canvas, W, H, { points, previewPos, isClosed, openings, is
 }
 
 export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onAddPoint, onUpdatePreview, onUndo }) {
-  const canvasRef  = useRef(null);
-  const wrapperRef = useRef(null);
-  const lastTapRef = useRef(0);
-  const isMobile   = useRef(
+  const canvasRef      = useRef(null);
+  const wrapperRef     = useRef(null);
+  const lastTapRef     = useRef(0);
+  const scaleRef       = useRef(1);          // zoom level saat ini
+  const pinchStartRef  = useRef(null);       // jarak awal saat pinch mulai
+  const isMobile       = useRef(
     typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
   ).current;
 
@@ -199,6 +201,20 @@ export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onA
     renderCanvas(canvas, CANVAS_MOBILE_PX, CANVAS_MOBILE_PX, renderArgs);
   }, [points, previewPos, isClosed, openings, isMobile]);
 
+  // ── Mobile: pasang touchmove non-passive agar preventDefault bisa bekerja ────
+  useEffect(() => {
+    if (!isMobile) return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const onMove = (e) => {
+      if (e.touches.length === 2 && pinchStartRef.current !== null) {
+        e.preventDefault();
+      }
+    };
+    wrapper.addEventListener('touchmove', onMove, { passive: false });
+    return () => wrapper.removeEventListener('touchmove', onMove);
+  }, [isMobile]);
+
   // ── Desktop mouse ────────────────────────────────────────────────────────────
   const getCanvasCoords = (clientX, clientY) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -217,17 +233,60 @@ export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onA
     onUpdatePreview(x, y);
   }, [isClosed, points.length, onUpdatePreview]);
 
-  // ── Mobile: double-tap pada wrapper ─────────────────────────────────────────
+  // ── Mobile: pinch-to-zoom ────────────────────────────────────────────────────
+  const pinchDist = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const applyScale = (newScale) => {
+    const clamped = Math.min(Math.max(newScale, 0.4), 3);
+    scaleRef.current = clamped;
+    if (canvasRef.current) {
+      canvasRef.current.style.transformOrigin = '0 0';
+      canvasRef.current.style.transform = `scale(${clamped})`;
+      // Beri tahu wrapper ukuran efektif agar scroll area menyesuaikan
+      canvasRef.current.style.marginBottom = `${CANVAS_MOBILE_PX * (clamped - 1)}px`;
+      canvasRef.current.style.marginRight  = `${CANVAS_MOBILE_PX * (clamped - 1)}px`;
+    }
+  };
+
+  const handleWrapperTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      pinchStartRef.current = pinchDist(e.touches);
+    }
+  }, []);
+
+  const handleWrapperTouchMove = useCallback((e) => {
+    if (e.touches.length === 2 && pinchStartRef.current !== null) {
+      // Dua jari = pinch, cegah scroll wrapper
+      e.preventDefault();
+      const ratio = pinchDist(e.touches) / pinchStartRef.current;
+      applyScale(scaleRef.current * ratio);
+      pinchStartRef.current = pinchDist(e.touches);
+    }
+  }, []);
+
   const handleWrapperTouchEnd = useCallback((e) => {
-    if (isClosed) return;
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      const touch = e.changedTouches[0];
-      const rect  = canvasRef.current.getBoundingClientRect();
-      onAddPoint(touch.clientX - rect.left, touch.clientY - rect.top, 22);
-      lastTapRef.current = 0;
-    } else {
-      lastTapRef.current = now;
+    // Reset pinch state saat jari diangkat
+    if (e.touches.length < 2) pinchStartRef.current = null;
+
+    // Double-tap = tambah titik (hanya saat single touch)
+    if (e.changedTouches.length === 1 && e.touches.length === 0) {
+      if (isClosed) return;
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        const touch = e.changedTouches[0];
+        const rect  = canvasRef.current.getBoundingClientRect();
+        // Kompensasi scale: posisi di dalam canvas = posisi layar / scale
+        const x = (touch.clientX - rect.left) / scaleRef.current;
+        const y = (touch.clientY - rect.top)  / scaleRef.current;
+        onAddPoint(x, y, 22 / scaleRef.current);
+        lastTapRef.current = 0;
+      } else {
+        lastTapRef.current = now;
+      }
     }
   }, [isClosed, onAddPoint]);
 
@@ -238,11 +297,18 @@ export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onA
         ref={wrapperRef}
         className="w-full rounded-xl border border-gray-200 bg-white overflow-auto"
         style={{ height: '55vh', minHeight: '320px' }}
+        onTouchStart={handleWrapperTouchStart}
+        onTouchMove={handleWrapperTouchMove}
         onTouchEnd={handleWrapperTouchEnd}
       >
         <canvas
           ref={canvasRef}
-          style={{ width: CANVAS_MOBILE_PX, height: CANVAS_MOBILE_PX, display: 'block' }}
+          style={{
+            width: CANVAS_MOBILE_PX,
+            height: CANVAS_MOBILE_PX,
+            display: 'block',
+            transformOrigin: '0 0',
+          }}
         />
       </div>
     );
