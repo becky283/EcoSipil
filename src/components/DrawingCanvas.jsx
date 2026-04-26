@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { GRID_SIZE, SCALE } from '../hooks/useDrawing';
 
 // Keyboard shortcut Ctrl+Z — sesuai spek §3.3
@@ -83,6 +83,7 @@ function drawOpeningMarker(ctx, p1, p2, count) {
 
 export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onAddPoint, onUpdatePreview, onUndo }) {
   const canvasRef = useRef(null);
+  const touchFiredRef = useRef(false);   // mencegah synthetic click setelah touchstart
   useUndoShortcut(onUndo);
 
   useEffect(() => {
@@ -192,31 +193,35 @@ export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onA
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  const handleClick = (e) => {
+  const handleClick = useCallback((e) => {
+    // Abaikan synthetic click yang dibuat browser setelah touchstart
+    if (touchFiredRef.current) { touchFiredRef.current = false; return; }
     if (isClosed) return;
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     onAddPoint(x, y, 20);
-  };
+  }, [isClosed, onAddPoint]);
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (isClosed || points.length === 0) return;
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     onUpdatePreview(x, y);
-  };
+  }, [isClosed, points.length, onUpdatePreview]);
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     e.preventDefault();
+    touchFiredRef.current = true;   // tandai agar onClick berikutnya diabaikan
     if (isClosed) return;
     const touch = e.touches[0];
     const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
-    onAddPoint(x, y, 30);
-  };
+    // snap radius 22px — cukup besar untuk jari tapi tidak langsung tutup polygon
+    onAddPoint(x, y, 22);
+  }, [isClosed, onAddPoint]);
 
   return (
     <canvas
       ref={canvasRef}
       className="w-full bg-white rounded-xl border border-gray-200 cursor-crosshair touch-none"
-      style={{ height: '60vh', display: 'block' }}
+      style={{ height: 'calc(100dvh - 180px)', minHeight: '340px', display: 'block' }}
       onClick={handleClick}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
