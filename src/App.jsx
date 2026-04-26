@@ -86,7 +86,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${phase === 'sketsa' ? 'bg-ecosipil' : 'bg-gray-50'}`}>
       <header className="bg-green-800 text-white px-4 py-2.5 flex items-center gap-3 shadow-md print:hidden">
         <img src="/logo.png" alt="EcoSipil" className="h-9 w-9 object-contain rounded-sm" />
         <div>
@@ -99,12 +99,17 @@ function App() {
 
         {phase === 'sketsa' && (
           <>
+            {/* Splash logo — hanya saat belum ada titik */}
             {points.length === 0 && (
-              <div className="flex flex-col items-center gap-1 mb-4 mt-1">
-                <img src="/logo.png" alt="EcoSipil" className="h-20 w-20 object-contain" />
-                <p className="text-xs text-gray-400 tracking-wide">Cerdas. Terintegrasi. Berkelanjutan.</p>
+              <div className="flex flex-col items-center gap-2 mb-5 mt-2">
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 flex flex-col items-center gap-1 shadow">
+                  <img src="/logo.png" alt="EcoSipil" className="h-16 w-16 object-contain drop-shadow" />
+                  <p className="text-white font-bold text-lg tracking-tight drop-shadow">EcoSipil</p>
+                  <p className="text-white/80 text-xs tracking-wide">Cerdas. Terintegrasi. Berkelanjutan.</p>
+                </div>
               </div>
             )}
+
             <ToolBar
               onUndo={undo}
               onClear={clear}
@@ -112,13 +117,12 @@ function App() {
               isClosed={isClosed}
               hasPoints={points.length > 0}
             />
-            {/* ── Legend skala + hint mobile ── */}
-            <div className="flex items-center justify-between mb-2 px-0.5">
 
+            {/* ── Legend skala + hint ── */}
+            <div className="flex items-center justify-between mb-2 px-0.5">
               {/* Skala 1 meter */}
-              <div className="flex items-center gap-2.5 bg-white border border-green-200 rounded-lg px-3 py-1.5 shadow-sm">
+              <div className="flex items-center gap-2.5 bg-white/90 backdrop-blur-sm border border-green-200 rounded-lg px-3 py-1.5 shadow-sm">
                 <div className="flex flex-col items-center gap-0.5">
-                  {/* Garis skala bergaya peta dengan end-cap */}
                   <div className="flex items-center">
                     <div className="w-px h-3 bg-green-700" />
                     <div className="h-0.5 bg-green-700 rounded-full" style={{ width: 40 }} />
@@ -128,20 +132,22 @@ function App() {
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-semibold text-green-800 leading-none">1 grid = 1 meter</p>
-                  <p className="text-xs text-gray-400 leading-none mt-0.5">snap ke titik grid</p>
+                  <p className="text-xs text-gray-500 leading-none mt-0.5">snap ke titik grid</p>
                 </div>
               </div>
 
-              {/* Hint desktop (tetap di bawah) / kosong di mobile */}
+              {/* Hint desktop */}
               {!isMobile && (
-                <p className="text-xs text-gray-400">{hintText()}</p>
+                <span className="text-xs text-white/90 bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                  {hintText()}
+                </span>
               )}
             </div>
 
-            {/* Hint mobile — di atas canvas, pill hijau */}
+            {/* Hint mobile pill */}
             {isMobile && (
               <div className="mb-2 flex justify-center">
-                <span className="inline-flex items-center gap-1.5 bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
+                <span className="inline-flex items-center gap-1.5 bg-green-900/80 backdrop-blur-sm text-white text-xs font-semibold px-4 py-2 rounded-full shadow">
                   <span className="text-base leading-none">
                     {isClosed ? '✅' : points.length === 0 ? '👆' : points.length >= 3 ? '🔵' : '✏️'}
                   </span>
@@ -160,28 +166,28 @@ function App() {
               onUndo={undo}
             />
 
-            {/* Hint desktop di bawah canvas */}
+            {/* Hint desktop bawah canvas */}
             {!isMobile && (
-              <p className="mt-3 text-sm text-gray-500 text-center">{hintText()}</p>
+              <p className="mt-3 text-sm text-white/80 text-center drop-shadow">{hintText()}</p>
             )}
 
-            <div className="mt-6 text-center text-xs text-gray-400 space-y-1">
+            <div className="mt-6 text-center text-xs text-white/70 space-y-1">
               <p>
                 Independent project oleh{' '}
-                <span className="text-gray-500 font-medium">Radithya Al Fattan Pratomo</span>
+                <span className="text-white/90 font-semibold">Radithya Al Fattan Pratomo</span>
                 {' '}· Teknik Sipil UI 2024
               </p>
               <div className="flex justify-center flex-wrap gap-x-4 gap-y-1">
-                <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-gray-600 underline underline-offset-2">
+                <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-white underline underline-offset-2">
                   radithyaalfattan4@gmail.com
                 </a>
-                <a href="https://instagram.com/radithya_a_p" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                <a href="https://instagram.com/radithya_a_p" target="_blank" rel="noreferrer" className="hover:text-white underline underline-offset-2">
                   IG: radithya_a_p
                 </a>
-                <a href="https://id.linkedin.com/in/radithyapratomo" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                <a href="https://id.linkedin.com/in/radithyapratomo" target="_blank" rel="noreferrer" className="hover:text-white underline underline-offset-2">
                   LinkedIn
                 </a>
-                <a href="https://github.com/becky283" target="_blank" rel="noreferrer" className="hover:text-gray-600 underline underline-offset-2">
+                <a href="https://github.com/becky283" target="_blank" rel="noreferrer" className="hover:text-white underline underline-offset-2">
                   GitHub: becky283
                 </a>
               </div>

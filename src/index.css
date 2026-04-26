@@ -16,6 +16,22 @@ body {
   color: #1f2937;
 }
 
+/* Background EcoSipil — desktop */
+.bg-ecosipil {
+  background-image: url('/Background For Dekstop.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Background EcoSipil — mobile */
+@media (max-width: 767px) {
+  .bg-ecosipil {
+    background-image: url('/Background For Mobile.png');
+    background-attachment: scroll;
+  }
+}
+
 @media print {
   header,
   .print\:hidden {
