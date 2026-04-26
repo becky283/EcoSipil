@@ -76,9 +76,9 @@ function App() {
   const hintText = () => {
     if (isClosed) return '✅ Ruangan tertutup — tekan "Selesai Menggambar" untuk lanjut';
     if (isMobile) {
-      if (points.length === 0) return 'Geser kanvas untuk navigasi, lalu tap "Tandai Titik" untuk mulai';
-      if (points.length >= 3) return 'Geser ke titik awal (lingkaran hijau) lalu tap "Tandai Titik" untuk menutup ruangan';
-      return 'Geser ke posisi berikutnya, lalu tap "Tandai Titik"';
+      if (points.length === 0) return 'Geser kanvas untuk navigasi · Tap 2× cepat untuk letakkan titik';
+      if (points.length >= 3) return 'Tap 2× cepat di lingkaran hijau untuk menutup ruangan';
+      return 'Geser ke posisi dinding berikutnya · Tap 2× untuk lanjut';
     }
     if (points.length === 0) return 'Klik di kanvas untuk mulai menggambar dinding pertama';
     if (points.length >= 3) return 'Klik titik pertama (lingkaran hijau tua) untuk menutup ruangan';
