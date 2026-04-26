@@ -112,6 +112,44 @@ function App() {
               isClosed={isClosed}
               hasPoints={points.length > 0}
             />
+            {/* ── Legend skala + hint mobile ── */}
+            <div className="flex items-center justify-between mb-2 px-0.5">
+
+              {/* Skala 1 meter */}
+              <div className="flex items-center gap-2.5 bg-white border border-green-200 rounded-lg px-3 py-1.5 shadow-sm">
+                <div className="flex flex-col items-center gap-0.5">
+                  {/* Garis skala bergaya peta dengan end-cap */}
+                  <div className="flex items-center">
+                    <div className="w-px h-3 bg-green-700" />
+                    <div className="h-0.5 bg-green-700 rounded-full" style={{ width: 40 }} />
+                    <div className="w-px h-3 bg-green-700" />
+                  </div>
+                  <span className="text-xs font-bold text-green-800 tracking-tight">1 m</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-green-800 leading-none">1 grid = 1 meter</p>
+                  <p className="text-xs text-gray-400 leading-none mt-0.5">snap ke titik grid</p>
+                </div>
+              </div>
+
+              {/* Hint desktop (tetap di bawah) / kosong di mobile */}
+              {!isMobile && (
+                <p className="text-xs text-gray-400">{hintText()}</p>
+              )}
+            </div>
+
+            {/* Hint mobile — di atas canvas, pill hijau */}
+            {isMobile && (
+              <div className="mb-2 flex justify-center">
+                <span className="inline-flex items-center gap-1.5 bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
+                  <span className="text-base leading-none">
+                    {isClosed ? '✅' : points.length === 0 ? '👆' : points.length >= 3 ? '🔵' : '✏️'}
+                  </span>
+                  {hintText()}
+                </span>
+              </div>
+            )}
+
             <DrawingCanvas
               points={points}
               previewPos={previewPos}
@@ -121,7 +159,11 @@ function App() {
               onUpdatePreview={updatePreview}
               onUndo={undo}
             />
-            <p className="mt-3 text-sm text-gray-500 text-center">{hintText()}</p>
+
+            {/* Hint desktop di bawah canvas */}
+            {!isMobile && (
+              <p className="mt-3 text-sm text-gray-500 text-center">{hintText()}</p>
+            )}
 
             <div className="mt-6 text-center text-xs text-gray-400 space-y-1">
               <p>

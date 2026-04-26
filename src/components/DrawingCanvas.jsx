@@ -1,8 +1,7 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { GRID_SIZE, SCALE, snapToGrid } from '../hooks/useDrawing';
 
-const CANVAS_METERS = 30;
-const CANVAS_PX     = CANVAS_METERS * GRID_SIZE; // 1200px
+const CANVAS_MOBILE_PX = 30 * GRID_SIZE; // 1200px — mobile scrollable
 
 function useUndoShortcut(onUndo) {
   useEffect(() => {
@@ -82,108 +81,130 @@ function drawOpeningMarker(ctx, p1, p2, count) {
   ctx.restore();
 }
 
+// Fungsi render utama — dipakai oleh desktop (resize) maupun mobile (fixed)
+function renderCanvas(canvas, W, H, { points, previewPos, isClosed, openings, isMobile }) {
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Dot grid
+  ctx.fillStyle = '#D1D5DB';
+  for (let x = GRID_SIZE; x < W; x += GRID_SIZE)
+    for (let y = GRID_SIZE; y < H; y += GRID_SIZE) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+  if (points.length === 0) return;
+
+  // Fill polygon tertutup
+  if (isClosed && points.length >= 3) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(47, 162, 79, 0.12)';
+    ctx.fill();
+  }
+
+  // Segmen dinding
+  for (let i = 0; i < points.length - 1; i++)
+    drawSegment(ctx, points[i], points[i + 1]);
+  if (isClosed)
+    drawSegment(ctx, points[points.length - 1], points[0]);
+
+  // Label dimensi
+  for (let i = 0; i < points.length - 1; i++)
+    drawDimensionLabel(ctx, points[i], points[i + 1]);
+  if (isClosed)
+    drawDimensionLabel(ctx, points[points.length - 1], points[0]);
+
+  // Marker bukaan
+  const wCount = isClosed ? points.length : points.length - 1;
+  for (let i = 0; i < wCount; i++) {
+    const p1 = points[i];
+    const p2 = i < points.length - 1 ? points[i + 1] : points[0];
+    const cnt = openings.filter(o => o.wallIndex === i).length;
+    if (cnt > 0) drawOpeningMarker(ctx, p1, p2, cnt);
+  }
+
+  // Preview desktop (mouse)
+  if (!isClosed && previewPos && points.length > 0 && !isMobile) {
+    const last = points[points.length - 1];
+    drawSegment(ctx, last, previewPos, true);
+    drawDimensionLabel(ctx, last, previewPos);
+  }
+
+  // Lingkaran snap titik pertama
+  if (!isClosed && points.length >= 3) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(points[0].x, points[0].y, 20, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(22, 107, 61, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Vertex dots
+  points.forEach((p, i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, i === 0 ? 7 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = i === 0 ? '#166B3D' : '#2FA24F';
+    ctx.fill();
+    if (i === 0) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+    }
+  });
+}
+
 export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onAddPoint, onUpdatePreview, onUndo }) {
-  const canvasRef   = useRef(null);
-  const wrapperRef  = useRef(null);
-  const lastTapRef  = useRef(0);
-  const isMobile    = useRef(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches).current;
+  const canvasRef  = useRef(null);
+  const wrapperRef = useRef(null);
+  const lastTapRef = useRef(0);
+  const isMobile   = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  ).current;
 
   useUndoShortcut(onUndo);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  const renderArgs = { points, previewPos, isClosed, openings, isMobile };
+
+  // ── Desktop: canvas mengisi wrapper, re-render saat resize ───────────────────
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (isMobile) return;
+    const canvas  = canvasRef.current;
+    const wrapper = wrapperRef.current;
+    if (!canvas || !wrapper) return;
 
-    canvas.width  = CANVAS_PX;
-    canvas.height = CANVAS_PX;
-    const ctx = canvas.getContext('2d');
-
-    ctx.clearRect(0, 0, CANVAS_PX, CANVAS_PX);
-
-    // Dot grid
-    ctx.fillStyle = '#D1D5DB';
-    for (let x = GRID_SIZE; x < CANVAS_PX; x += GRID_SIZE)
-      for (let y = GRID_SIZE; y < CANVAS_PX; y += GRID_SIZE) {
-        ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-    if (points.length === 0) return;
-
-    // Fill polygon tertutup
-    if (isClosed && points.length >= 3) {
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      points.forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(47, 162, 79, 0.12)';
-      ctx.fill();
-    }
-
-    // Segmen dinding
-    for (let i = 0; i < points.length - 1; i++)
-      drawSegment(ctx, points[i], points[i + 1]);
-    if (isClosed)
-      drawSegment(ctx, points[points.length - 1], points[0]);
-
-    // Label dimensi
-    for (let i = 0; i < points.length - 1; i++)
-      drawDimensionLabel(ctx, points[i], points[i + 1]);
-    if (isClosed)
-      drawDimensionLabel(ctx, points[points.length - 1], points[0]);
-
-    // Marker bukaan
-    const wCount = isClosed ? points.length : points.length - 1;
-    for (let i = 0; i < wCount; i++) {
-      const p1 = points[i];
-      const p2 = i < points.length - 1 ? points[i + 1] : points[0];
-      const cnt = openings.filter(o => o.wallIndex === i).length;
-      if (cnt > 0) drawOpeningMarker(ctx, p1, p2, cnt);
-    }
-
-    // Preview desktop
-    if (!isClosed && previewPos && points.length > 0 && !isMobile) {
-      const last = points[points.length - 1];
-      drawSegment(ctx, last, previewPos, true);
-      drawDimensionLabel(ctx, last, previewPos);
-    }
-
-    // Lingkaran snap titik pertama
-    if (!isClosed && points.length >= 3) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(points[0].x, points[0].y, 20, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(22, 107, 61, 0.5)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 3]);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // Vertex dots
-    points.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, i === 0 ? 7 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = i === 0 ? '#166B3D' : '#2FA24F';
-      ctx.fill();
-      if (i === 0) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'white';
-        ctx.fill();
-      }
-    });
+    const render = () => renderCanvas(canvas, wrapper.offsetWidth, wrapper.offsetHeight, renderArgs);
+    render();
+    const ro = new ResizeObserver(render);
+    ro.observe(wrapper);
+    return () => ro.disconnect();
   }, [points, previewPos, isClosed, openings, isMobile]);
 
-  // ── Desktop: koordinat dari canvas element ───────────────────────────────────
+  // ── Mobile: canvas fixed 1200×1200px, tidak perlu resize ─────────────────────
+  useEffect(() => {
+    if (!isMobile) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    renderCanvas(canvas, CANVAS_MOBILE_PX, CANVAS_MOBILE_PX, renderArgs);
+  }, [points, previewPos, isClosed, openings, isMobile]);
+
+  // ── Desktop mouse ────────────────────────────────────────────────────────────
   const getCanvasCoords = (clientX, clientY) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  // ── Desktop mouse ────────────────────────────────────────────────────────────
   const handleClick = useCallback((e) => {
     if (isClosed) return;
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
@@ -196,54 +217,47 @@ export function DrawingCanvas({ points, previewPos, isClosed, openings = [], onA
     onUpdatePreview(x, y);
   }, [isClosed, points.length, onUpdatePreview]);
 
-  // ── Mobile: double-tap pada wrapper (bukan canvas) ───────────────────────────
-  // Wrapper menangkap touch, canvas sendiri tidak punya handler apapun
-  // sehingga browser bebas melakukan scroll/pan native
+  // ── Mobile: double-tap pada wrapper ─────────────────────────────────────────
   const handleWrapperTouchEnd = useCallback((e) => {
     if (isClosed) return;
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
-      // Double-tap — hitung koordinat relatif terhadap canvas
-      const touch  = e.changedTouches[0];
-      const canvas = canvasRef.current;
-      const rect   = canvas.getBoundingClientRect();
-      // getBoundingClientRect sudah mempertimbangkan scroll wrapper
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      onAddPoint(x, y, 22);
+      const touch = e.changedTouches[0];
+      const rect  = canvasRef.current.getBoundingClientRect();
+      onAddPoint(touch.clientX - rect.left, touch.clientY - rect.top, 22);
       lastTapRef.current = 0;
     } else {
       lastTapRef.current = now;
     }
   }, [isClosed, onAddPoint]);
 
+  // ── Mobile render ─────────────────────────────────────────────────────────────
   if (isMobile) {
     return (
-      // Wrapper: ukuran tetap, overflow scroll, browser handle pan secara native
       <div
         ref={wrapperRef}
         className="w-full rounded-xl border border-gray-200 bg-white overflow-auto"
         style={{ height: '55vh', minHeight: '320px' }}
         onTouchEnd={handleWrapperTouchEnd}
       >
-        {/* Canvas fixed 1200×1200px — bisa di-scroll ke segala arah */}
         <canvas
           ref={canvasRef}
-          style={{ width: CANVAS_PX, height: CANVAS_PX, display: 'block' }}
+          style={{ width: CANVAS_MOBILE_PX, height: CANVAS_MOBILE_PX, display: 'block' }}
         />
       </div>
     );
   }
 
-  // Desktop: canvas mengisi layar, resize observer tidak diperlukan karena ukuran fixed
+  // ── Desktop render ────────────────────────────────────────────────────────────
   return (
     <div
-      className="w-full rounded-xl border border-gray-200 bg-white overflow-auto"
+      ref={wrapperRef}
+      className="w-full rounded-xl border border-gray-200 bg-white"
       style={{ height: 'calc(100dvh - 180px)', minHeight: '320px' }}
     >
       <canvas
         ref={canvasRef}
-        style={{ width: CANVAS_PX, height: CANVAS_PX, display: 'block', cursor: 'crosshair' }}
+        style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
       />
