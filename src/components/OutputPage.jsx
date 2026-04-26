@@ -3,6 +3,7 @@ import { RABTable } from './RABTable';
 import { ChartSection } from './ChartSection';
 import { SensitivityPanel } from './SensitivityPanel';
 import { MaterialComparison } from './MaterialComparison';
+import { FloorPlanPreview } from './FloorPlanPreview';
 import { getRegionLabel, getMultiplier } from '../data/priceDatabase.js';
 
 const MATERIAL_LABEL = {
@@ -18,9 +19,12 @@ const STAT_CARDS = (v) => [
   { label: 'Luas Lantai',            val: `${v.totalLuasLantai} m²` },
 ];
 
-export function OutputPage({ params, volumeResult, rabResult, carbonResult, comparisonData, onBack, onMulaiUlang }) {
+export function OutputPage({ params, points, isClosed, openings, volumeResult, rabResult, carbonResult, comparisonData, onBack, onMulaiUlang }) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+
+      {/* ── Preview Denah ── */}
+      <FloorPlanPreview points={points} isClosed={isClosed} openings={openings} />
 
       {/* ── Print-only header (muncul hanya saat print/PDF) ── */}
       <div className="hidden print:flex items-center gap-4 pb-4 mb-2 border-b-2 border-green-800">

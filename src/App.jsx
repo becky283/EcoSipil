@@ -204,6 +204,9 @@ function App() {
         {phase === 'output' && hasil && (
           <OutputPage
             params={params}
+            points={points}
+            isClosed={isClosed}
+            openings={openings}
             volumeResult={hasil.volumeResult}
             rabResult={hasil.rabResult}
             carbonResult={hasil.carbonResult}
