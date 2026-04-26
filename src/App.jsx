@@ -72,9 +72,15 @@ function App() {
     setPhase('sketsa');
   };
 
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const hintText = () => {
-    if (points.length === 0) return 'Klik di kanvas untuk mulai menggambar dinding pertama';
     if (isClosed) return '✅ Ruangan tertutup — tekan "Selesai Menggambar" untuk lanjut';
+    if (isMobile) {
+      if (points.length === 0) return 'Geser kanvas untuk navigasi, lalu tap "Tandai Titik" untuk mulai';
+      if (points.length >= 3) return 'Geser ke titik awal (lingkaran hijau) lalu tap "Tandai Titik" untuk menutup ruangan';
+      return 'Geser ke posisi berikutnya, lalu tap "Tandai Titik"';
+    }
+    if (points.length === 0) return 'Klik di kanvas untuk mulai menggambar dinding pertama';
     if (points.length >= 3) return 'Klik titik pertama (lingkaran hijau tua) untuk menutup ruangan';
     return 'Klik titik berikutnya untuk melanjutkan dinding';
   };

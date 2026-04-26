@@ -183,17 +183,25 @@ export function ParamPanel({ totalPanjang, points, isClosed, openings, onOpening
           <div className="space-y-5">
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tinggi Dinding (m)</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-700">Tinggi Dinding</label>
+                <span className="text-lg font-bold text-green-700">{tinggi.toFixed(1)} m</span>
+              </div>
               <input
-                type="number"
-                min="1.0"
+                type="range"
+                min="2.0"
                 max="6.0"
                 step="0.1"
                 value={tinggi}
-                onChange={e => setTinggi(parseFloat(e.target.value) || 3)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500"
+                onChange={e => setTinggi(parseFloat(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-green-600"
+                style={{ background: `linear-gradient(to right, #16a34a ${((tinggi - 2) / 4) * 100}%, #e5e7eb ${((tinggi - 2) / 4) * 100}%)` }}
               />
-              <p className="text-xs text-gray-400 mt-1">Min 1.0 m · Max 6.0 m · Default 3.0 m</p>
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>2.0 m</span>
+                <span>3.0 m (standar)</span>
+                <span>6.0 m</span>
+              </div>
             </div>
 
             <div>
