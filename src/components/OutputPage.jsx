@@ -180,7 +180,7 @@ export function OutputPage({ params, points, isClosed, openings, volumeResult, r
       <div className="print:hidden pb-2">
         <button
           onClick={() => window.print()}
-          className="w-full py-4 rounded-xl bg-green-700 text-white text-base font-bold hover:bg-green-800 active:bg-green-900 shadow-sm"
+          className="w-full py-4 rounded-xl bg-white text-green-800 text-base font-bold hover:bg-white/90 active:bg-white/80 shadow-md border border-white/60"
         >
           🖨 Print / Simpan PDF
         </button>
@@ -189,15 +189,15 @@ export function OutputPage({ params, points, isClosed, openings, volumeResult, r
       {/* ── Footer branded ── */}
       <div className="pb-8 flex flex-col items-center gap-2 print:pb-4">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="EcoSipil" className="h-7 w-7 object-contain opacity-70" />
-          <span className="text-sm font-bold text-green-800 opacity-70">EcoSipil</span>
+          <img src="/logo.png" alt="EcoSipil" className="h-7 w-7 object-contain drop-shadow" />
+          <span className="text-sm font-bold text-white drop-shadow">EcoSipil</span>
         </div>
-        <p className="text-xs text-gray-400 text-center">
+        <p className="text-xs text-white/80 text-center">
           Cerdas. Terintegrasi. Berkelanjutan.
         </p>
-        <p className="text-xs text-gray-400 text-center">
+        <p className="text-xs text-white/70 text-center">
           Independent project ·{' '}
-          <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-gray-600 underline underline-offset-2">
+          <a href="mailto:radithyaalfattan4@gmail.com" className="hover:text-white underline underline-offset-2">
             Radithya Al Fattan Pratomo
           </a>
           {' '}· Teknik Sipil UI 2024

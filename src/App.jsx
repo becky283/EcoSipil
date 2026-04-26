@@ -88,7 +88,7 @@ function App() {
   return (
     <div className="min-h-screen bg-ecosipil">
       <header className="bg-green-800 text-white px-4 py-2.5 flex items-center gap-3 shadow-md print:hidden">
-        <img src="/logo.png" alt="EcoSipil" className="h-9 w-9 object-contain rounded-sm" />
+        <img src="/logo.png" alt="EcoSipil" className="h-9 w-9 object-contain drop-shadow" />
         <div>
           <span className="text-lg font-bold tracking-tight leading-none">EcoSipil</span>
           <p className="text-green-300 text-xs leading-none mt-0.5">{PHASE_LABEL[phase]}</p>

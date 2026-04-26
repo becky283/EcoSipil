@@ -110,10 +110,10 @@ export function ParamPanel({ totalPanjang, points, isClosed, openings, onOpening
 
       {/* ── Logo mini ParamPanel ── */}
       <div className="flex items-center gap-3 mb-4 px-1">
-        <img src="/logo.png" alt="EcoSipil" className="h-10 w-10 object-contain" />
+        <img src="/logo.png" alt="EcoSipil" className="h-10 w-10 object-contain drop-shadow" />
         <div>
-          <p className="text-sm font-bold text-green-800 leading-none">EcoSipil</p>
-          <p className="text-xs text-gray-400 leading-none mt-0.5">Parameter Dinding</p>
+          <p className="text-sm font-bold text-white drop-shadow leading-none">EcoSipil</p>
+          <p className="text-xs text-white/80 leading-none mt-0.5">Parameter Dinding</p>
         </div>
       </div>
 
