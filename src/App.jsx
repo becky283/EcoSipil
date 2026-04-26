@@ -86,7 +86,7 @@ function App() {
   };
 
   return (
-    <div className={`min-h-screen ${phase === 'sketsa' ? 'bg-ecosipil' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-ecosipil">
       <header className="bg-green-800 text-white px-4 py-2.5 flex items-center gap-3 shadow-md print:hidden">
         <img src="/logo.png" alt="EcoSipil" className="h-9 w-9 object-contain rounded-sm" />
         <div>
